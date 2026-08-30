@@ -26,24 +26,32 @@ class Data(BaseModel):
     hours_per_week: int = Field(..., example=40, alias="hours-per-week")
     native_country: str = Field(..., example="United-States", alias="native-country")
 
-path = None # TODO: enter the path for the saved encoder 
-encoder = load_model(path)
+# Enter the path for the saved encoder 
+encoder_path = os.path.join("model", "encoder.pkl")
+encoder = load_model(encoder_path)
 
-path = None # TODO: enter the path for the saved model 
-model = load_model(path)
+# Enter the path for the saved model 
+model_path = os.path.join("model", "model.pkl")
+model = load_model(model_path)
 
-# TODO: create a RESTful API using FastAPI
-app = None # your code here
+# Create a RESTful API using FastAPI
+app = FastAPI(
+    title="Census Income Prediction API",
+    description="An API that predicts whether income exceeds $50K/yr based on census data.",
+    version="1.0.0"
+)
 
-# TODO: create a GET on the root giving a welcome message
+# Create a GET on the root giving a welcome message
 @app.get("/")
 async def get_root():
     """ Say hello!"""
-    # your code here
-    pass
+    return {
+        "message": "Welcome to the Census Income Prediction API!",
+        "status": "Healthy"
+    }
 
 
-# TODO: create a POST on a different path that does model inference
+# Create a POST on a different path that does model inference
 @app.post("/data/")
 async def post_inference(data: Data):
     # DO NOT MODIFY: turn the Pydantic model into a dict.
@@ -64,11 +72,20 @@ async def post_inference(data: Data):
         "sex",
         "native-country",
     ]
+    
+    # Use the process_data function provided to process the data.
     data_processed, _, _, _ = process_data(
-        # your code here
-        # use data as data input
-        # use training = False
-        # do not need to pass lb as input
+        X=data,
+        categorical_features=cat_features,
+        label=None, # No label during inference
+        training=False,
+        encoder=encoder
     )
-    _inference = None # your code here to predict the result using data_processed
-    return {"result": apply_label(_inference)}
+    
+    # Predict the result using data_processed
+    _inference = inference(model, data_processed)
+
+    prediction_value = _inference[0] if hasattr(_inference, "__getitem__") else _inference
+    # If apply_label returns a numpy string or array, convert to native python string/int:
+    result_label = apply_label(prediction_value)
+    return {"result": str(result_label)}
