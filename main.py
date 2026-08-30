@@ -34,6 +34,9 @@ encoder = load_model(encoder_path)
 model_path = os.path.join("model", "model.pkl")
 model = load_model(model_path)
 
+lb_path = os.path.join("model", "lb.pkl")
+lb = load_model(lb_path)
+
 # Create a RESTful API using FastAPI
 app = FastAPI(
     title="Census Income Prediction API",
@@ -79,13 +82,12 @@ async def post_inference(data: Data):
         categorical_features=cat_features,
         label=None, # No label during inference
         training=False,
-        encoder=encoder
+        encoder=encoder,
+        lb=lb
     )
     
     # Predict the result using data_processed
     _inference = inference(model, data_processed)
 
-    prediction_value = _inference[0] if hasattr(_inference, "__getitem__") else _inference
-    # If apply_label returns a numpy string or array, convert to native python string/int:
-    result_label = apply_label(prediction_value)
+    result_label = apply_label(_inference)
     return {"result": str(result_label)}
